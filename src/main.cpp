@@ -122,7 +122,7 @@ void loop() {
   char output[55];
 
   long now = millis();
-  if (now - lastMsg > 20000) {
+  if (now - lastMsg > 10000) {
     lastMsg = now;
 
     float temp = dht.readTemperature();
