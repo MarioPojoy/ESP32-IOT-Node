@@ -20,21 +20,27 @@ unsigned long lastMsg = 0;
 #define MSG_BUFFER_SIZE	(50)
 char msg[MSG_BUFFER_SIZE];
 int value = 0;
+int read_interval = 30000;
+const char* hostname = "esp32-iot-node";
 
 void setup_wifi() {
 
   delay(100);
-  // We start by connecting to a WiFi network
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
-
-  //WiFi.init(AP_STA_MODE);
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
+  }
+  
+  if (!MDNS.begin(hostname)) {
+    Serial.println("Error setting up MDNS responder!");
+    while (1) {
+      delay(1000);
+    }
   }
 
   randomSeed(micros());
@@ -46,15 +52,14 @@ void setup_wifi() {
 }
 
 void setup_ota(){
+  ArduinoOTA.setHostname(hostname);
   ArduinoOTA
     .onStart([]() {
       String type;
       if (ArduinoOTA.getCommand() == U_FLASH)
         type = "sketch";
-      else // U_SPIFFS
+      else
         type = "filesystem";
-
-      // NOTE: if updating SPIFFS this would be the place to unmount SPIFFS using SPIFFS.end()
       Serial.println("Start updating " + type);
     })
     .onEnd([]() {
@@ -79,24 +84,18 @@ void callback(char* topic, byte* payload, unsigned int length) {
 }
 
 void reconnect() {
-  // Loop until we're reconnected
   while (!client.connected()) {
     Serial.print("Attempting MQTT connection...");
-    // Create a random client ID
     String clientId = "ESP32Client-";
     clientId += String(random(0xffff), HEX);
-    // Attempt to connect
     if (client.connect(clientId.c_str())) {
       Serial.println("connected");
-      // Once connected, publish an announcement...
       client.publish("outTopic", "hello world");
-      // ... and resubscribe
       client.subscribe("inTopic");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
       Serial.println(" try again in 5 seconds");
-      // Wait 5 seconds before retrying
       delay(5000);
     }
   }
@@ -122,7 +121,7 @@ void loop() {
   char output[55];
 
   long now = millis();
-  if (now - lastMsg > 10000) {
+  if (now - lastMsg > read_interval) {
     lastMsg = now;
 
     float temp = dht.readTemperature();
@@ -133,7 +132,7 @@ void loop() {
 
     serializeJson(doc, output);
     Serial.println(output);
-    client.publish("/home/sensors", output);
+    client.publish("/bedroom/sensors", output);
     Serial.println("Sent");
   }
     
