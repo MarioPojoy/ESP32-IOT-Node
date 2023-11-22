@@ -12,6 +12,7 @@
 
 #define DHTPIN GPIO_NUM_4  
 #define DHTTYPE DHT22
+#define STATUS_LED  BUILTIN_LED
 
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -102,6 +103,7 @@ void reconnect() {
 }
 
 void setup() {
+  pinMode(STATUS_LED, OUTPUT);
   Serial.begin(115200);
   while (!Serial);
   dht.begin();
@@ -122,6 +124,7 @@ void loop() {
 
   long now = millis();
   if (now - lastMsg > read_interval) {
+    digitalWrite(STATUS_LED, HIGH);
     lastMsg = now;
 
     float temp = dht.readTemperature();
@@ -134,6 +137,7 @@ void loop() {
     Serial.println(output);
     client.publish("/bedroom/sensors", output);
     Serial.println("Sent");
+    digitalWrite(STATUS_LED, LOW);
   }
     
 }
