@@ -17,15 +17,13 @@
 WiFiClient espClient;
 PubSubClient client(espClient);
 DHT dht(DHTPIN, DHTTYPE);
+
 unsigned long lastMsg = 0;
-#define MSG_BUFFER_SIZE	(50)
-char msg[MSG_BUFFER_SIZE];
-int value = 0;
-int read_interval = 30000;
+int read_interval = 5000;
+
 const char* hostname = "esp32-iot-node";
 
 void setup_wifi() {
-
   delay(100);
   Serial.println();
   Serial.print("Connecting to ");
@@ -91,8 +89,6 @@ void reconnect() {
     clientId += String(random(0xffff), HEX);
     if (client.connect(clientId.c_str())) {
       Serial.println("connected");
-      client.publish("outTopic", "hello world");
-      client.subscribe("inTopic");
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -115,10 +111,12 @@ void setup() {
 
 void loop() {
   ArduinoOTA.handle();
+  
   if (!client.connected()) {
     reconnect();
   }
   client.loop();
+  
   StaticJsonDocument<32> doc;
   char output[55];
 
@@ -128,14 +126,15 @@ void loop() {
     lastMsg = now;
 
     float temp = dht.readTemperature();
-    float humidity = dht.readHumidity();;
+    float humidity = dht.readHumidity();
+    
     doc["t"] = temp;
     doc["h"] = humidity;
+    
     Serial.println("Read");
-
     serializeJson(doc, output);
     Serial.println(output);
-    client.publish("/bedroom/sensors", output);
+    client.publish("home/bedroom/sensors", output);
     Serial.println("Sent");
     digitalWrite(STATUS_LED, LOW);
   }
