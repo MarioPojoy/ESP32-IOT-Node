@@ -19,7 +19,7 @@ PubSubClient client(espClient);
 DHT dht(DHTPIN, DHTTYPE);
 
 unsigned long lastMsg = 0;
-int read_interval = 5000;
+int read_interval = 10000;
 
 const char* hostname = "esp32-iot-node";
 
@@ -89,6 +89,9 @@ void reconnect() {
     clientId += String(random(0xffff), HEX);
     if (client.connect(clientId.c_str())) {
       Serial.println("connected");
+      String hostnameGreet = hostname;
+      hostnameGreet += " connected"; 
+      client.publish("home/connections", hostnameGreet.c_str());
     } else {
       Serial.print("failed, rc=");
       Serial.print(client.state());
@@ -101,7 +104,7 @@ void reconnect() {
 void setup() {
   pinMode(STATUS_LED, OUTPUT);
   Serial.begin(115200);
-  while (!Serial);
+  delay(100);
   dht.begin();
   setup_wifi();
   setup_ota();
