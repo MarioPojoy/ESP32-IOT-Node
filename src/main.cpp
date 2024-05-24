@@ -8,7 +8,17 @@
 #include <PubSubClient.h>
 #include <DHT.h>
 #include <Adafruit_Sensor.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SH110X.h>
+#include <Fonts/FreeMonoBold18pt7b.h>
 #include "credentials.h"
+#include "logo.h"
+
+#define i2c_Address   0x3c
+#define SCREEN_WIDTH   128
+#define SCREEN_HEIGHT   64
+#define OLED_RESET      -1
+Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
 #define DHTPIN GPIO_NUM_4  
 #define DHTTYPE DHT22
@@ -19,7 +29,7 @@ PubSubClient client(espClient);
 DHT dht(DHTPIN, DHTTYPE);
 
 unsigned long lastMsg = 0;
-int read_interval = 10000;
+int read_interval = 30000;
 
 const char* hostname = "esp32-iot-node";
 
@@ -106,9 +116,13 @@ void setup() {
   Serial.begin(115200);
   delay(100);
   dht.begin();
+  display.begin(i2c_Address, true);
+  display.clearDisplay();
+  display.display();
   setup_wifi();
   setup_ota();
   client.setServer(mqtt_server, 1883);
+  display.setTextColor(SH110X_WHITE);
   client.setCallback(callback);
 }
 
@@ -139,6 +153,21 @@ void loop() {
     Serial.println(output);
     client.publish("home/bedroom/sensors", output);
     Serial.println("Sent");
+
+    display.clearDisplay();
+    display.drawBitmap(0, 0, logo_bmp, SCREEN_WIDTH, SCREEN_HEIGHT, SH110X_WHITE);
+    display.setFont(&FreeMonoBold18pt7b);
+    display.setTextColor(SH110X_WHITE);
+    display.setCursor(45, 28);
+    display.print((int)temp);
+    display.drawCircle(92, 8, 3, SH110X_WHITE);
+    display.setCursor(100, 27);
+    display.print("C");
+    display.setCursor(45, 62);
+    display.print((int)humidity);
+    display.print("%");
+    display.display(); 
+
     digitalWrite(STATUS_LED, LOW);
   }
     
