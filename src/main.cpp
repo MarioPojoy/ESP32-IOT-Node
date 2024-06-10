@@ -8,36 +8,41 @@
 #include <PubSubClient.h>
 #include <DHT.h>
 #include <Adafruit_Sensor.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SH110X.h>
-#include <Fonts/FreeMonoBold18pt7b.h>
 #include "credentials.h"
 #include "logo.h"
 
-#define i2c_Address   0x3c
-#define SCREEN_WIDTH   128
-#define SCREEN_HEIGHT   64
-#define OLED_RESET      -1
-Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#define oled
+
+#if defined(oled)
+  #include <Adafruit_GFX.h>
+  #include <Adafruit_SH110X.h>
+  #include <Fonts/FreeMonoBold18pt7b.h>
+  #define i2c_Address   0x3c
+  #define SCREEN_WIDTH   128
+  #define SCREEN_HEIGHT   64
+  #define OLED_RESET      -1
+  Adafruit_SH1106G display = Adafruit_SH1106G(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
+#endif
 
 #define DHTPIN GPIO_NUM_4  
 #define DHTTYPE DHT22
 #define STATUS_LED  BUILTIN_LED
+DHT dht(DHTPIN, DHTTYPE);
 
 WiFiClient espClient;
 PubSubClient client(espClient);
-DHT dht(DHTPIN, DHTTYPE);
 
 unsigned long lastMsg = 0;
-int read_interval = 30000;
+const int read_interval = 20000;
 
-const char* hostname = "esp32-iot-node";
+const char* hostname = "esp32-iot-node1";
 
 void setup_wifi() {
   delay(100);
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
+  WiFi.mode(WIFI_STA);
   WiFi.begin(ssid, password);
 
   while (WiFi.status() != WL_CONNECTED) {
@@ -116,13 +121,15 @@ void setup() {
   Serial.begin(115200);
   delay(100);
   dht.begin();
-  display.begin(i2c_Address, true);
-  display.clearDisplay();
-  display.display();
+  #if defined(oled)
+    display.begin(i2c_Address, true);
+    display.clearDisplay();
+    display.display();
+    display.setTextColor(SH110X_WHITE);
+  #endif
   setup_wifi();
   setup_ota();
   client.setServer(mqtt_server, 1883);
-  display.setTextColor(SH110X_WHITE);
   client.setCallback(callback);
 }
 
@@ -142,8 +149,13 @@ void loop() {
     digitalWrite(STATUS_LED, HIGH);
     lastMsg = now;
 
+/*  
     float temp = dht.readTemperature();
-    float humidity = dht.readHumidity();
+    float humidity = dht.readHumidity(); 
+*/
+    
+    float temp = 21.3;
+    float humidity = 60.50; 
     
     doc["t"] = temp;
     doc["h"] = humidity;
@@ -151,24 +163,24 @@ void loop() {
     Serial.println("Read");
     serializeJson(doc, output);
     Serial.println(output);
-    client.publish("home/bedroom/sensors", output);
+    client.publish("home/sensors/salon1", output);
     Serial.println("Sent");
-
-    display.clearDisplay();
-    display.drawBitmap(0, 0, logo_bmp, SCREEN_WIDTH, SCREEN_HEIGHT, SH110X_WHITE);
-    display.setFont(&FreeMonoBold18pt7b);
-    display.setTextColor(SH110X_WHITE);
-    display.setCursor(45, 28);
-    display.print((int)temp);
-    display.drawCircle(92, 8, 3, SH110X_WHITE);
-    display.setCursor(100, 27);
-    display.print("C");
-    display.setCursor(45, 62);
-    display.print((int)humidity);
-    display.print("%");
-    display.display(); 
+    #if defined(oled)
+      display.clearDisplay();
+      display.drawBitmap(0, 0, logo_bmp, SCREEN_WIDTH, SCREEN_HEIGHT, SH110X_WHITE);
+      display.setFont(&FreeMonoBold18pt7b);
+      display.setTextColor(SH110X_WHITE);
+      display.setCursor(45, 28);
+      display.print((int)temp);
+      display.drawCircle(92, 8, 3, SH110X_WHITE);
+      display.setCursor(100, 27);
+      display.print("C");
+      display.setCursor(45, 62);
+      display.print((int)humidity);
+      display.print("%");
+      display.display();
+    #endif
 
     digitalWrite(STATUS_LED, LOW);
   }
-    
 }
