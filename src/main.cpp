@@ -11,7 +11,7 @@
 #include "credentials.h"
 #include "logo.h"
 
-#define oled
+//#define oled
 
 #if defined(oled)
   #include <Adafruit_GFX.h>
@@ -149,13 +149,8 @@ void loop() {
     digitalWrite(STATUS_LED, HIGH);
     lastMsg = now;
 
-/*  
     float temp = dht.readTemperature();
-    float humidity = dht.readHumidity(); 
-*/
-    
-    float temp = 21.3;
-    float humidity = 60.50; 
+    float humidity = dht.readHumidity();
     
     doc["t"] = temp;
     doc["h"] = humidity;
